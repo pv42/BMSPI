@@ -1,11 +1,22 @@
-import datetime
 import time
 import smtplib
+import json
 
-from MCP3008 import MCP3008
+from datetime import datetime
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formatdate
+
+# from MCP3008 import MCP3008
 
 FILE_TO_WRITE = "data.cvs"
-INTERVAL = 10
+INTERVAL = 10  # seconds
+MAX_DATA = 100
+
+credentials = json.load(open("credentials.json", "r"))
+last_data = [-1, -1, -1, -1, -1, -1, -1, -1]
+current_count = 0
 
 
 def read_data():
@@ -13,7 +24,10 @@ def read_data():
     value = {}
     for num in range(0, 8):
         value[num] = adc.read(num) / 1023.0 * 3.3
-        print("Voltage %d: %.2f" % (num ,value[num]))
+        print("Voltage %d (set %d): %.2f" % (num, current_count, value[num]))
+    last_data = value
+    global current_count
+    current_count = current_count + 1
     return value
 
 
@@ -31,28 +45,44 @@ def write_head():
     file.write("TIME;DATA0;DATA1;DATA2;DATA3;DATA4;DATA5;DATA6;DATA7;")
     file.close()
 
-def send_mail():
-    try:
-        smtp = smtplib.SMTP('gmail.com')
-        msg = """From: Riot <riot.games.de.lol@gmail.com>
-To: pv42 <pv42.97@gmail.com>
-Subject: testbms
 
-this is a text email
-"""
-        smtp.sendmail("riot.games.de.lol@gmail.com", ["pv42.97@gmail.com"],msg)
+def send_mail():
+    msg = MIMEMultipart()
+    msg['FROM'] = credentials["sender"]
+    msg['TO'] = credentials["receiver"]
+    msg['Date'] = formatdate(localtime=True)
+    msg['SUBJECT'] = "BMS PI"
+    file = open(FILE_TO_WRITE, "rb")
+    msg.attach(MIMEText("Hello pv42,\n this is the automated BMS report.\nThe last data set was {}".format(last_data)))
+    part = MIMEApplication(file.read(), Name="data.cvs")
+    file.close()
+    part['Content-Disposition'] = 'attachment; filename="%s"' % "data.cvs"
+    msg.attach(part)
+
+    try:
+        smtps = smtplib.SMTP_SSL(credentials["server"])
+        smtps.set_debuglevel(True)
+        smtps.login(credentials["username"], credentials["password"])
+        smtps.sendmail(credentials["sender"], [credentials["receiver"]], msg.as_string())
+        smtps.quit()
         print("Mail send")
-    except Exeception:
-        print(ex) 
+    except Exception as ex:
+        print(ex)
         print("Error sending mail")
+        exit()
+
 
 def main():
     write_head()
-    send_mail();
     while True:
-        ctime = datetime.datetime.now()
+        ctime = datetime.now()
         data = read_data()
         write_data(data, ctime)
+        if current_count >= MAX_DATA:
+            send_mail()
+            write_head()
+            print("Reset")
         time.sleep(INTERVAL)
+
 
 main()
