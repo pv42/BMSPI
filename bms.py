@@ -1,42 +1,53 @@
 import time
 import smtplib
 import json
+from os.path import isfile
 
 from datetime import datetime
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
-
-# from MCP3008 import MCP3008
+from MCP3008 import MCP3008
 
 FILE_TO_WRITE = "data.cvs"
 INTERVAL = 10  # seconds
 MAX_DATA = 100
 
-credentials = json.load(open("credentials.json", "r"))
+if not isfile("credentials.json"):
+    credentials = {}
+    fp = open("credentials.json", "w")
+    credentials["sender"] = "sender@server.cc"
+    credentials["server"] = "smtp.server.cc"
+    credentials["password"] = "hunter2"
+    credentials["username"] = "username"
+    credentials["receiver"] = "receiver@server2.cc"
+    json.dump(credentials, fp)
+    print("Please enter the credentials in the credentials.json file")
+else:
+    credentials = json.load(open("credentials.json", "r"))
 last_data = [-1, -1, -1, -1, -1, -1, -1, -1]
 current_count = 0
 
 
 def read_data():
+    global current_count, last_data
     adc = MCP3008()
     value = {}
     for num in range(0, 8):
         value[num] = adc.read(num) / 1023.0 * 3.3
         print("Voltage %d (set %d): %.2f" % (num, current_count, value[num]))
     last_data = value
-    global current_count
     current_count = current_count + 1
     return value
 
 
-def write_data(data, time):
+def write_data(data, current_time):
     file = open(FILE_TO_WRITE, "a")
     data_string = ""
     for d in data:
         data_string = data_string + str(d) + ";"
-    file.write(time.strftime("%d.%m.%Y %H:%M:%S") + ";" + data_string + "\n")
+    file.write(current_time.strftime("%d.%m.%Y %H:%M:%S") + ";" + data_string + "\n")
     file.close()
 
 
@@ -47,6 +58,7 @@ def write_head():
 
 
 def send_mail():
+    global credentials
     msg = MIMEMultipart()
     msg['FROM'] = credentials["sender"]
     msg['TO'] = credentials["receiver"]

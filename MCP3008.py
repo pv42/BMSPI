@@ -1,4 +1,8 @@
-from spidev import SpiDev
+try:
+    from spidev import SpiDev
+except Exception as ex:
+    print("Please install SpiDev first.")
+    exit()
 
 
 class MCP3008:
