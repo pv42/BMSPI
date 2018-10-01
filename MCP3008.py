@@ -1,8 +1,21 @@
 try:
     from spidev import SpiDev
-except Exception as ex:
+except ModuleNotFoundError as ex:
     print("Please install SpiDev first.")
-    exit()
+
+    class SpiDev:
+        def open(self, bus, device):
+            print("SpiDevDummy::Open bus{}/dev{}".format(bus,device))
+
+        def xfer2(self, args):
+            # print("SpiDevDummy::xfer2")
+            dummy = [0, 0, 0]
+            return dummy
+
+        def close(self):
+            print("SpiDevDummy::close")
+
+    # exit()
 
 
 class MCP3008:
