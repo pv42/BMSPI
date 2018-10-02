@@ -1,5 +1,6 @@
 from threading import Thread
 import socket
+import site_creator
 
 OWN_IP = "127.0.0.1"
 OWN_PORT = 80
@@ -13,13 +14,21 @@ def read_file(name):
     return fh.read()
 
 
-def http_200(length):
-    return b"HTTP/1.1 200 OK\r\n" + \
-           b"Content-Type:text/html; charset=utf-8\r\n" + \
-           b"Cache-Control: no-store, no-cache\r\n" + \
-           b"Pragma: no-cache\r\n" + \
-           bytes("Content-Length:{}\r\n".format(length), "utf-8") + \
-           b"\r\n"
+def http_head(code, length):
+    if code == 200:
+        return b"HTTP/1.1 200 OK\r\n" + \
+               b"Content-Type:text/html; charset=utf-8\r\n" + \
+               b"Cache-Control: no-store, no-cache\r\n" + \
+               b"Pragma: no-cache\r\n" + \
+               bytes("Content-Length:{}\r\n".format(length), "utf-8") + \
+               b"\r\n"
+    elif code == 404:
+        return b"HTTP/1.1 404 Not Found\r\n" + \
+               b"Content-Type:text/html; charset=utf-8\r\n" + \
+               b"Cache-Control: no-store, no-cache\r\n" + \
+               b"Pragma: no-cache\r\n" + \
+               bytes("Content-Length:{}\r\n".format(length), "utf-8") + \
+               b"\r\n"
 
 
 class WebServer(Thread):
@@ -47,7 +56,9 @@ class WebServer(Thread):
             print("HTTP:" + str(line0))
             if line0[0] == "GET":
                 if line0[1] == "/":
-                    self.send_file("login.html")
+                    self.send_http(site_creator.create_login(False))
+                else:
+                    self.send_http(site_creator.create404(), 404)
             elif line0[0] == "POST":
                 if line0[1] == "/":
                     chunks = data.split("\r\n\r\n")
@@ -64,17 +75,12 @@ class WebServer(Thread):
                         elif k == "username":
                             user = v
                     if user in passwords and passwords[user] == pwd:
-                        self.send_file("main.html")
+                        self.send_http(site_creator.create_main([0, 0, 0, 0, 0, 0, 0, 0], None))
                     else:
-                        self.send_file("login_wrong.html")
-
+                        self.send_http(site_creator.create_login(True))
             else:
                 print("unknown request")
 
-    def send_file(self, name):
-        data = read_file(name)
-        self.send_http(data)
-
-    def send_http(self, data):
-        self.connection.send(http_200(len(data)) + data)
-        print((http_200(len(data)) + data).decode("utf-8"))
+    def send_http(self, data, status_code=200):
+        self.connection.send(http_head(status_code, len(data)) + bytes(data, "utf-8"))
+        print((http_head(status_code, len(data)) + bytes(data, "utf-8")).decode("utf-8"))
