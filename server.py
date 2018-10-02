@@ -29,10 +29,16 @@ def http_head(code, length):
                b"Pragma: no-cache\r\n" + \
                bytes("Content-Length:{}\r\n".format(length), "utf-8") + \
                b"\r\n"
+    elif code == 403:
+        return b"HTTP/1.1 403 Forbidden\r\n" + \
+               b"Content-Type:text/html; charset=utf-8\r\n" + \
+               b"Cache-Control: no-store, no-cache\r\n" + \
+               b"Pragma: no-cache\r\n" + \
+               bytes("Content-Length:{}\r\n".format(length), "utf-8") + \
+               b"\r\n"
 
 
 class WebServer(Thread):
-
     def __init__(self):
         super().__init__()
         self.connection = None
@@ -41,12 +47,30 @@ class WebServer(Thread):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind((OWN_IP, OWN_PORT))
         server_socket.listen(1)
-        self.connection, address = server_socket.accept()
-        print("Connection from " + str(address))
+        while True:
+            connection, address = server_socket.accept()
+            print("Connection from " + str(address))
+            WebServerConnection(connection).start()
+
+
+USER_LEVEL_NONE = 0
+USER_LEVEL_READ = 1
+USER_LEVEL_FULL = 2
+
+
+class WebServerConnection(Thread):
+
+    def __init__(self, connection):
+        super().__init__()
+        self.connection = connection
+        self.user_level = USER_LEVEL_NONE
+
+    def run(self):
         while True:
             data = self.connection.recv(BUFFER_SIZE).decode("utf-8")
             print(data)
-            if not data: continue
+            if not data:
+                continue
             lines = data.split("\n")
             line0 = lines[0].split()
             if len(line0) != 3:
@@ -57,6 +81,11 @@ class WebServer(Thread):
             if line0[0] == "GET":
                 if line0[1] == "/":
                     self.send_http(site_creator.create_login(False))
+                elif line0[1] == "/main":
+                    if self.user_level > USER_LEVEL_NONE:
+                        self.send_http(site_creator.create_main([0, 0, 0, 0, 0, 0, 0, 0], None))
+                    else:
+                        self.send_http(site_creator.create403(), 403)
                 else:
                     self.send_http(site_creator.create404(), 404)
             elif line0[0] == "POST":
@@ -75,7 +104,8 @@ class WebServer(Thread):
                         elif k == "username":
                             user = v
                     if user in passwords and passwords[user] == pwd:
-                        self.send_http(site_creator.create_main([0, 0, 0, 0, 0, 0, 0, 0], None))
+                        self.user_level = USER_LEVEL_FULL
+                        self.send_http(site_creator.create_redirect("main"))
                     else:
                         self.send_http(site_creator.create_login(True))
             else:

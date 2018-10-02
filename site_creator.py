@@ -11,7 +11,7 @@ def create_login(failed):
     else:
         failed_str = ""
     return read_file("head.html").format("login") + "<body>" + read_file("login.html").format(failed_str) + \
-           "</body></html>"
+        "</body></html>"
 
 
 def create_data_overview(voltages):
@@ -27,4 +27,9 @@ def create_header(title):
 
 
 def create404():
-    return create_header("404") + "<body>" + "404 - The requested page was not found" + "</body></html>"
+    return create_header("404") + "<body>" + "404 (Not Found) - The requested page was not found" + "</body></html>"
+
+
+def create403():
+    return create_header(
+        "403") + "<body>" + "403 (Forbidden) - You are not allowed to view this page" + "</body></html>"
