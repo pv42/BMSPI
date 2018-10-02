@@ -68,9 +68,9 @@ class WebServerConnection(Thread):
     def run(self):
         while True:
             data = self.connection.recv(BUFFER_SIZE).decode("utf-8")
-            print(data)
             if not data:
                 continue
+            print(data)
             lines = data.split("\n")
             line0 = lines[0].split()
             if len(line0) != 3:

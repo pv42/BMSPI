@@ -1,11 +1,21 @@
 try:
     from spidev import SpiDev
 except ModuleNotFoundError as ex:
+    print("----------------------------")
     print("Please install SpiDev first.")
+    print("----------------------------")
+    print("Using dummy data for now")
+
 
     class SpiDev:
+        def __init__(self):
+            self.bus = None
+            self.device = None
+
         def open(self, bus, device):
-            print("SpiDevDummy::Open bus{}/dev{}".format(bus,device))
+            print("SpiDevDummy::open bus{}/dev{}".format(bus, device))
+            self.bus = bus
+            self.device = device
 
         def xfer2(self, args):
             # print("SpiDevDummy::xfer2")
@@ -13,7 +23,7 @@ except ModuleNotFoundError as ex:
             return dummy
 
         def close(self):
-            print("SpiDevDummy::close")
+            print("SpiDevDummy::close bus{}/dev{}".format(self.bus, self.device))
 
     # exit()
 

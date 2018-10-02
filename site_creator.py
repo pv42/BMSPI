@@ -11,7 +11,7 @@ def create_login(failed):
     else:
         failed_str = ""
     return read_file("head.html").format("login") + "<body>" + read_file("login.html").format(failed_str) + \
-        "</body></html>"
+           "</body></html>"
 
 
 def create_data_overview(voltages):
@@ -33,3 +33,12 @@ def create404():
 def create403():
     return create_header(
         "403") + "<body>" + "403 (Forbidden) - You are not allowed to view this page" + "</body></html>"
+
+
+def create_redirect(url):
+    return """<html><head><title>redirecting to {0}</title>
+<meta http-equiv="refresh" content="10; URL={0}">
+</head>
+<body>redirecting to <a href="{0}">{0}</a></p>
+</body>
+</html>""".format(url)
