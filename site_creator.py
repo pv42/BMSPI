@@ -10,7 +10,7 @@ def create_login(failed):
         failed_str = "password or username wrong<br/>"
     else:
         failed_str = ""
-    return read_file("head.html").format("login") + "<body>" + read_file("login.html").format(failed_str) + \
+    return read_file("head.html").format("login") + "<body>" + read_file("login.html").format(failed_str) +\
            "</body></html>"
 
 
@@ -18,8 +18,17 @@ def create_data_overview(voltages):
     return read_file("data_overview.html").format(voltages)
 
 
+def create_email(email_state):
+    if email_state:
+        email_str = "enabled, sending to {}".format(email_state.receiver)
+    else:
+        email_str = "disabled"
+    return read_file("email.html").format(email_str)
+
+
 def create_main(voltages, email_state):
-    return create_header("Home") + "<body>" + create_data_overview(voltages) + "</body></html>"
+    return create_header("Home") + "<body>" + create_data_overview(voltages) + create_email(email_state) +\
+           "</body></html>"
 
 
 def create_header(title):

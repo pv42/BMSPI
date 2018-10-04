@@ -3,8 +3,8 @@ try:
 except ModuleNotFoundError as ex:
     print("----------------------------")
     print("Please install SpiDev first.")
-    print("----------------------------")
     print("Using dummy data for now")
+    print("----------------------------")
 
 
     class SpiDev:
