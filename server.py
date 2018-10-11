@@ -86,7 +86,8 @@ class WebServerConnection(Thread):
                     self.send_http(site_creator.create_login(False))
                 elif line0[1] == "/main":
                     if self.user_level > USER_LEVEL_NONE:
-                        self.send_http(site_creator.create_main([0, 0, 0, 0, 0, 0, 0, 0], self.bms.configuration.email))
+                        self.send_http(site_creator.create_main(self.bms.last_data, self.bms.configuration.email,
+                                                                self.bms.configuration.data_reading))
                     else:
                         self.send_http(site_creator.create403(), 403)
                 elif line0[1] == "/email":
@@ -125,17 +126,19 @@ class WebServerConnection(Thread):
                         continue
                     post_data = chunks[1]
                     post = {}
+                    enabled = False
                     for att in post_data.split("&"):
                         if "=" in att:
                             [k, v] = att.split("=")
                             post[k] = v
                             if k == "enabled":
-                                if v == "on":
-                                    self.bms.configuration.email["enabled"] = True
-                                else:
-                                    self.bms.configuration.email["enabled"] = False
+                                enabled = True
                             else:
                                 self.bms.configuration.email[k] = urllib.parse.unquote(v)
+                    if enabled:
+                        self.bms.configuration.email["enabled"] = True
+                    else:
+                        self.bms.configuration.email["enabled"] = False
                     self.bms.configuration.save_to_file()
                     self.send_http(site_creator.create_email(self.bms.configuration.email))
                 else:
@@ -145,4 +148,4 @@ class WebServerConnection(Thread):
 
     def send_http(self, data, status_code=200):
         self.connection.send(http_head(status_code, len(data)) + bytes(data, "utf-8"))
-        print((http_head(status_code, len(data)) + bytes(data, "utf-8")).decode("utf-8"))
+        # print((http_head(status_code, len(data)) + bytes(data, "utf-8")).decode("utf-8"))

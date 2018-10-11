@@ -14,8 +14,8 @@ def create_login(failed):
            "</body></html>"
 
 
-def create_data_overview(voltages):
-    return read_file("overview_data.html").format(voltages)
+def create_data_overview(voltages, data_config):
+    return read_file("overview_data.html").format(voltages, data_config)
 
 
 def create_email_overview(email_state):
@@ -26,8 +26,8 @@ def create_email_overview(email_state):
     return read_file("overview_email.html").format(email_str)
 
 
-def create_main(voltages, email_state):
-    return create_header("Home") + "<body>" + create_data_overview(voltages) + create_email_overview(email_state) + \
+def create_main(voltages, email_config, data_config):
+    return create_header("Home") + "<body>" + create_data_overview(voltages, data_config) + create_email_overview(email_config) + \
            "</body></html>"
 
 
@@ -36,7 +36,7 @@ def create_email(email_config):
     if email_config["enabled"]:
         checked_str = "checked"
     return create_header("email") + "<body>" + read_file("email.html").format(checked_str, email_config) + "</body" \
-                                                                                                          "></html> "
+                                                                                                           "></html> "
 
 
 def create_header(title):

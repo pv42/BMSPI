@@ -1,13 +1,17 @@
+
 try:
     from spidev import SpiDev
 except ModuleNotFoundError as ex:
+
     print("----------------------------")
     print("Please install SpiDev first.")
     print("Using dummy data for now")
     print("----------------------------")
 
+    import random
 
     class SpiDev:
+
         def __init__(self):
             self.bus = None
             self.device = None
@@ -19,7 +23,7 @@ except ModuleNotFoundError as ex:
 
         def xfer2(self, args):
             # print("SpiDevDummy::xfer2")
-            dummy = [0, 0, 0]
+            dummy = [0, 0, random.randint(0, 256)]
             return dummy
 
         def close(self):

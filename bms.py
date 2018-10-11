@@ -48,8 +48,8 @@ class BatteryManagementSystem:
 
     def send_mail(self):
         msg = MIMEMultipart()
-        msg['FROM'] = self.get_email_credentials()["sender"]
-        msg['TO'] = self.get_email_credentials()["receiver"]
+        msg['FROM'] = self.configuration.email["sender"]
+        msg['TO'] = self.configuration.email["receiver"]
         msg['Date'] = formatdate(localtime=True)
         msg['SUBJECT'] = "BMS PI"
         file = open(FILE_TO_WRITE, "rb")
