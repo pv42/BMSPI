@@ -1,3 +1,4 @@
+import urllib
 from threading import Thread
 import socket
 import site_creator
@@ -39,8 +40,9 @@ def http_head(code, length):
 
 
 class WebServer(Thread):
-    def __init__(self):
+    def __init__(self, bms):
         super().__init__()
+        self.bms = bms
         self.connection = None
 
     def run(self):
@@ -50,7 +52,7 @@ class WebServer(Thread):
         while True:
             connection, address = server_socket.accept()
             print("Connection from " + str(address))
-            WebServerConnection(connection).start()
+            WebServerConnection(connection, self.bms).start()
 
 
 USER_LEVEL_NONE = 0
@@ -60,10 +62,11 @@ USER_LEVEL_FULL = 2
 
 class WebServerConnection(Thread):
 
-    def __init__(self, connection):
+    def __init__(self, connection, battery_mangement_system):
         super().__init__()
         self.connection = connection
         self.user_level = USER_LEVEL_NONE
+        self.bms = battery_mangement_system
 
     def run(self):
         while True:
@@ -83,7 +86,12 @@ class WebServerConnection(Thread):
                     self.send_http(site_creator.create_login(False))
                 elif line0[1] == "/main":
                     if self.user_level > USER_LEVEL_NONE:
-                        self.send_http(site_creator.create_main([0, 0, 0, 0, 0, 0, 0, 0], None))
+                        self.send_http(site_creator.create_main([0, 0, 0, 0, 0, 0, 0, 0], self.bms.configuration.email))
+                    else:
+                        self.send_http(site_creator.create403(), 403)
+                elif line0[1] == "/email":
+                    if self.user_level > USER_LEVEL_NONE:
+                        self.send_http(site_creator.create_email(self.bms.configuration.email))
                     else:
                         self.send_http(site_creator.create403(), 403)
                 else:
@@ -108,6 +116,30 @@ class WebServerConnection(Thread):
                         self.send_http(site_creator.create_redirect("main"))
                     else:
                         self.send_http(site_creator.create_login(True))
+                elif line0[1] == "/email":
+                    if self.user_level == USER_LEVEL_NONE:
+                        self.send_http(site_creator.create403(), 403)
+                        continue
+                    chunks = data.split("\r\n\r\n")
+                    if len(chunks) < 2:
+                        continue
+                    post_data = chunks[1]
+                    post = {}
+                    for att in post_data.split("&"):
+                        if "=" in att:
+                            [k, v] = att.split("=")
+                            post[k] = v
+                            if k == "enabled":
+                                if v == "on":
+                                    self.bms.configuration.email["enabled"] = True
+                                else:
+                                    self.bms.configuration.email["enabled"] = False
+                            else:
+                                self.bms.configuration.email[k] = urllib.parse.unquote(v)
+                    self.bms.configuration.save_to_file()
+                    self.send_http(site_creator.create_email(self.bms.configuration.email))
+                else:
+                    self.send_http(site_creator.create404(), 404)
             else:
                 print("unknown request")
 

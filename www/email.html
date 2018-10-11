@@ -1,4 +1,11 @@
-<div id="email">
-    Email sending {} <!-- enabled / disabled -->
-    <a href="email">change</a>
+<div name="email">
+    <form method="post">
+        <input type="checkbox" {0} name="enabled"/>enable email sending<br/>
+        Senders email address<input type="text" value="{1[sender]}" name="sender"/><br/>
+        Receivers email address<input type="text" value="{1[receiver]}" name="receiver"/><br/>
+        Senders SMTPS server<input type="text" value="{1[server]}" name="server"/><br/>
+        Senders email username<input type="text" value="{1[credentials][username]}" name="username"/><br/>
+        Senders email password<input type="text" value="{1[credentials][password]}" name="password"/><br/>
+        <input type="submit" value="change">
+    </form>
 </div>

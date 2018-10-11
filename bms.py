@@ -1,3 +1,4 @@
+import os
 import time
 import smtplib
 import json
@@ -11,9 +12,10 @@ from email.utils import formatdate
 from MCP3008 import MCP3008
 from server import WebServer
 
-FILE_TO_WRITE = "data.cvs"
+FILE_TO_WRITE = "current_data.cvs"
 INTERVAL = 10  # seconds
 MAX_DATA = 2
+CONFIG_FILENAME = "config/bms_config.json"
 
 
 class BatteryManagementSystem:
@@ -41,7 +43,7 @@ class BatteryManagementSystem:
     @staticmethod
     def write_head():
         file = open(FILE_TO_WRITE, "w")
-        file.write("TIME;DATA0;DATA1;DATA2;DATA3;DATA4;DATA5;DATA6;DATA7;")
+        file.write("TIME;DATA0;DATA1;DATA2;DATA3;DATA4;DATA5;DATA6;DATA7;\n")
         file.close()
 
     def send_mail(self):
@@ -79,43 +81,72 @@ class BatteryManagementSystem:
         self.current_count = 0
         self.write_head()
 
-    def get_email_credentials(self):
-        return self.configuration.email_configuration.credentials
-
     def loop(self):
         current_time = datetime.now()
         data = self.read_data()
         self.write_data(data, current_time)
         if self.current_count >= MAX_DATA:
-            self.send_mail()
+            if self.configuration.email["enabled"]:
+                self.send_mail()
+            os.rename(FILE_TO_WRITE, "data/" + str(datetime.now()).replace(":", "-") + ".cvs")
             self.write_head()
             print("Reset")
-        time.sleep(INTERVAL)
+        time.sleep(self.configuration.data_reading["measure_timeout"])
+
+    def get_email_credentials(self):
+        return self.configuration.email["credentials"]
 
 
 class Configuration:
-    def __init__(self):
-        self.email_configuration = EmailConfiguration()
+    def load_from_file(self):
+        fp = open(CONFIG_FILENAME, "r")
+        data = json.load(fp)
+        self.web_credentials = data["web_credentials"]
+        self.data_reading = data["data_reading"]
+        self.email = data["email"]
+        fp.close()
 
+    def save_to_file(self):
+        fp = open(CONFIG_FILENAME, "w")
+        data = {"web_credentials": self.web_credentials,
+                "data_reading": self.data_reading,
+                "email": self.email}
+        json.dump(data, fp)
+        fp.close()
 
-class EmailConfiguration:
     def __init__(self):
-        if not isfile("email_credentials.json"):
-            fp = open("email_credentials.json", "w")
-            self.credentials["sender"] = "sender@server.cc"
-            self.credentials["server"] = "smtp.server.cc"
-            self.credentials["password"] = "hunter2"
-            self.credentials["username"] = "username"
-            self.credentials["receiver"] = "receiver@server2.cc"
-            json.dump(self.credentials, fp)
-            fp.close()
-            print("Please enter the credentials in the email_credentials.json file")
+        self.web_credentials = None
+        self.data_reading = None
+        self.email = None
+        if not isfile(CONFIG_FILENAME):
+            print("Creating config file \"" + CONFIG_FILENAME + "\" ...")
+            self.web_credentials = {
+                "username": "admin",
+                "password": "toor"
+            }
+            self.data_reading = {
+                "number_of_channels": 8,
+                "measure_timeout": 10,
+                "dates_per_file": 360
+            }
+            self.email = {
+                "enabled": False,
+                "sender": "exsender@gmail.com",
+                "receiver": "exreceiver@gmail.com",
+                "server": "smtp.gmail.com:465",
+                "credentials": {
+                    "username": "",
+                    "password": ""
+                }
+            }
+            self.save_to_file()
         else:
-            self.credentials = json.load(open("email_credentials.json", "r"))
+            self.load_from_file()
 
 
 bms = BatteryManagementSystem()
-server = WebServer()
+server = WebServer(bms)
 server.start()
+
 while True:
     bms.loop()
