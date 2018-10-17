@@ -9,21 +9,33 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
+from threading import Thread
+
 from MCP3008 import MCP3008
 from server import WebServer
 
+VERSION = "0.01.133"
+
 FILE_TO_WRITE = "current_data.cvs"
-INTERVAL = 10  # seconds
-MAX_DATA = 2
 CONFIG_FILENAME = "config/bms_config.json"
 
 
-class BatteryManagementSystem:
+class BatteryManagementSystem(Thread):
+
+    def __init__(self):
+        super().__init__()
+        self.version = VERSION
+        self.configuration = Configuration()
+        self.last_data = [-1, -1, -1, -1, -1, -1, -1, -1]
+        self.current_count = 0
+        self.write_head()
+        self.should_run = True
+        self.is_running = False
 
     def read_data(self):
         adc = MCP3008()
-        value = {}
-        for num in range(0, 8):
+        value = [0] * self.configuration.data_reading["number_of_channels"]
+        for num in range(0, self.configuration.data_reading["number_of_channels"]):
             value[num] = adc.read(num) / 1023.0 * 3.3
             print("Voltage %d (set %d): %.2f" % (num, self.current_count, value[num]))
         adc.close()
@@ -62,7 +74,7 @@ class BatteryManagementSystem:
         msg.attach(part)
 
         try:
-            smtps_connection = smtplib.SMTP_SSL(self.get_email_credentials()["server"])
+            smtps_connection = smtplib.SMTP_SSL(self.configuration.email["server"])
             print(self.get_email_credentials()["username"], self.get_email_credentials()["password"])
             smtps_connection.set_debuglevel(True)
             smtps_connection.login(self.get_email_credentials()["username"], self.get_email_credentials()["password"])
@@ -71,30 +83,41 @@ class BatteryManagementSystem:
             smtps_connection.quit()
             print("Mail send")
         except Exception as ex:
-            print(ex)
-            print("Error sending mail")
+            print()
+            print("Error sending mail (ex:{})".format(ex))
             exit()
 
-    def __init__(self):
-        self.configuration = Configuration()
-        self.last_data = [-1, -1, -1, -1, -1, -1, -1, -1]
-        self.current_count = 0
-        self.write_head()
+    def run(self):
+        while True:
+            if self.should_run:
+                self.is_running = True
+                while self.should_run:
+                    self.loop()
+                self.is_running = False
+                self.on_stop()
+            time.sleep(1)
 
     def loop(self):
         current_time = datetime.now()
         data = self.read_data()
         self.write_data(data, current_time)
-        if self.current_count >= MAX_DATA:
+        if self.current_count >= self.configuration.data_reading["dates_per_file"]:
             if self.configuration.email["enabled"]:
                 self.send_mail()
-            os.rename(FILE_TO_WRITE, "data/" + str(datetime.now()).replace(":", "-") + ".cvs")
             self.write_head()
             print("Reset")
-        time.sleep(self.configuration.data_reading["measure_timeout"])
+        for i in range(self.configuration.data_reading["measure_timeout"]):
+            if not self.should_run:
+                return
+            time.sleep(1)
 
     def get_email_credentials(self):
         return self.configuration.email["credentials"]
+
+    def on_stop(self):
+        if self.configuration.email["enabled"]:
+            self.send_mail()
+        os.rename(FILE_TO_WRITE, "data/" + str(datetime.now()).replace(":", "-") + ".cvs")
 
 
 class Configuration:
@@ -146,7 +169,6 @@ class Configuration:
 
 bms = BatteryManagementSystem()
 server = WebServer(bms)
-server.start()
 
-while True:
-    bms.loop()
+bms.start()
+server.start()

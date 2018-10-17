@@ -87,7 +87,8 @@ class WebServerConnection(Thread):
                 elif line0[1] == "/main":
                     if self.user_level > USER_LEVEL_NONE:
                         self.send_http(site_creator.create_main(self.bms.last_data, self.bms.configuration.email,
-                                                                self.bms.configuration.data_reading))
+                                                                self.bms.configuration.data_reading,
+                                                                self.bms))
                     else:
                         self.send_http(site_creator.create403(), 403)
                 elif line0[1] == "/email":
@@ -95,6 +96,19 @@ class WebServerConnection(Thread):
                         self.send_http(site_creator.create_email(self.bms.configuration.email))
                     else:
                         self.send_http(site_creator.create403(), 403)
+                elif line0[1] == "/stop":
+                    if self.user_level > USER_LEVEL_NONE:
+                        self.bms.should_run = False
+                        self.send_http(site_creator.create_redirect("main"))
+                    else:
+                        self.send_http(site_creator.create403(), 403)
+                elif line0[1] == "/start":
+                    if self.user_level > USER_LEVEL_NONE:
+                        self.bms.should_run = True
+                        self.send_http(site_creator.create_redirect("main"))
+                    else:
+                        self.send_http(site_creator.create403(), 403)
+
                 else:
                     self.send_http(site_creator.create404(), 404)
             elif line0[0] == "POST":

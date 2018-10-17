@@ -10,8 +10,8 @@ def create_login(failed):
         failed_str = "password or username wrong<br/>"
     else:
         failed_str = ""
-    return read_file("head.html").format("login") + "<body>" + read_file("login.html").format(failed_str) + \
-           "</body></html>"
+    return read_file("head.html").format("login") + "<body>" + read_file("login.html").format(failed_str) + "</body" \
+                                                                                                            "></html> "
 
 
 def create_data_overview(voltages, data_config):
@@ -26,8 +26,39 @@ def create_email_overview(email_state):
     return read_file("overview_email.html").format(email_str)
 
 
-def create_main(voltages, email_config, data_config):
-    return create_header("Home") + "<body>" + create_data_overview(voltages, data_config) + create_email_overview(email_config) + \
+def create_stopping():
+    return "<div id='stopping'>BMS is stopping ...</div>"
+
+
+def create_starting():
+    return "<div id='stopping'>BMS is starting ...</div>"
+
+
+def create_bms_overview(bms):
+    if bms.is_running:
+        if bms.should_run:
+            content = create_stop()
+        else:
+            content = create_stopping()
+    else:
+        if bms.should_run:
+            content = create_starting()
+        else:
+            content = create_start()
+    return "<div id=''><h1>BMS</h1>" + "Version: " + bms.version + content + "</div>"
+
+
+def create_start():
+    return "<div id='start'>BMS is stopped. <a href='start'>Start it</a></div>"
+
+
+def create_stop():
+    return "<div id='stop'>BMS is running. <a href='stop'>Stop it</a></div>"
+
+
+def create_main(voltages, email_config, data_config, bms):
+    return create_header("Home") + "<body>" + create_data_overview(voltages, data_config) + \
+           create_email_overview(email_config) + create_bms_overview(bms) + \
            "</body></html>"
 
 
@@ -49,7 +80,8 @@ def create404():
 
 def create403():
     return create_header(
-        "403") + "<body>" + "403 (Forbidden) - You are not allowed to view this page" + "</body></html>"
+        "403") + "<body>" + "403 (Forbidden) - You are not allowed to view this page<br/>" +\
+        "<a href='..'>Log in</a></body></html>"
 
 
 def create_redirect(url):
