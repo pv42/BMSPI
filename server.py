@@ -47,8 +47,13 @@ class WebServer(Thread):
 
     def run(self):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind((OWN_IP, OWN_PORT))
-        server_socket.listen(1)
+        try:
+            server_socket.bind((OWN_IP, OWN_PORT))
+            server_socket.listen(1)
+        except Exception as ex:
+            print("Could not start web server: failed to bind port 80")
+            print("Try to run this as root and make sure you have no other webserver running")
+            return
         while True:
             connection, address = server_socket.accept()
             print("Connection from " + str(address))
