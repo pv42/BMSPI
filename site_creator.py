@@ -1,5 +1,5 @@
 def read_file(name):
-    fh = open("www/" + name, "r")
+    fh = open("www/" + name, "r", encoding="utf-8")
     fc = fh.read()
     fh.close()
     return fc
