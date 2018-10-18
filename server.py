@@ -3,7 +3,7 @@ from threading import Thread
 import socket
 import site_creator
 
-OWN_IP = "127.0.0.1"
+OWN_IP = "0.0.0.0"
 OWN_PORT = 80
 BUFFER_SIZE = 2048
 
@@ -53,6 +53,7 @@ class WebServer(Thread):
         except Exception as ex:
             print("Could not start web server: failed to bind port 80")
             print("Try to run this as root and make sure you have no other webserver running")
+            print(ex)
             return
         while True:
             connection, address = server_socket.accept()
